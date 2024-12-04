@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.urls import reverse
 
 
 class Tag(models.Model):
@@ -9,7 +8,7 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
-    
+
     class Meta:
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
@@ -17,34 +16,40 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=255, verbose_name='Название')
-    measurement_unit = models.CharField(max_length=100, verbose_name='Единица измерения')
+    measurement_unit = models.CharField(
+        max_length=100, verbose_name='Единица измерения')
 
     def __str__(self):
         return self.name
-    
+
     class Meta:
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
-    
+
 
 class Recipe(models.Model):
     name = models.CharField(max_length=255, verbose_name='Название')
     ingredients = models.ManyToManyField(
-        Ingredient, through='RecipeIngredient', related_name='ingredient_recipes',
+        Ingredient, through='RecipeIngredient',
+        related_name='ingredient_recipes',
         verbose_name='Ингредиенты'
     )
     tags = models.ManyToManyField(Tag, blank=True, verbose_name='Теги')
-    cooking_time = models.IntegerField(default=10, blank=True, null=True, verbose_name='Время приготовления')
-    text = models.CharField(max_length=256, blank=True, null=True, verbose_name='Описание')
-    image = models.ImageField(blank=True, null=True, verbose_name='Изображение')
+    cooking_time = models.IntegerField(default=10, blank=True, null=True,
+                                       verbose_name='Время приготовления')
+    text = models.CharField(max_length=256, blank=True, null=True,
+                            verbose_name='Описание')
+    image = models.ImageField(blank=True, null=True,
+                              verbose_name='Изображение')
     favorites = models.ManyToManyField(
         get_user_model(),
         related_name='favorites_recipe',
         blank=True,
         verbose_name='Подписки'
     )
-    author = models.ManyToManyField(
+    author = models.ForeignKey(
         get_user_model(),
+        models.CASCADE,
         related_name='author_recipe',
         blank=True,
         verbose_name='Автор'
@@ -52,11 +57,11 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name
-    
+
     class Meta:
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
-    
+
 
 class Favorite(models.Model):
     user = models.ForeignKey(
@@ -68,8 +73,10 @@ class Favorite(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='recipe_ingredients')
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name='recipe_ingredients')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
+                               related_name='recipe_ingredients')
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
+                                   related_name='recipe_ingredients')
     amount = models.CharField(blank=True, null=True, max_length=100)
 
     class Meta:
