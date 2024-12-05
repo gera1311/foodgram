@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
@@ -7,14 +8,15 @@ from djoser.serializers import SetPasswordSerializer as \
     DjoserSetPasswordSerializer
 
 from recipes.models import Recipe, Ingredient, Tag
-from users.models import User
+from users.models import User, Follow
 from .serializers import (ListRetrieveRecipeSerializer,
                           CreateUpdateDeleteRecipeSerializer,
                           IngredientSerializer,
                           TagSerializer,
                           IngredientCreateSerializer,
                           UserSerializer,
-                          UserCreateSerializer, UserAvatarSerializer)
+                          UserCreateSerializer, UserAvatarSerializer,
+                          SubscribeAuthorSerializer)
 from .pagination import CustomPagination
 from .utils import decode_base64_image
 
@@ -133,3 +135,39 @@ class UserViewSet(mixins.CreateModelMixin,
                 {'detail': 'У пользователя нет аватара.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=True, methods=['post', 'delete'],
+            permission_classes=(IsAuthenticated,))
+    def subscribe(self, request, **kwargs):
+        author = get_object_or_404(User, id=kwargs['pk'])
+
+        if request.method == 'POST':
+            # Создаем сериализатор
+            serializer = SubscribeAuthorSerializer(
+                author, context={'request': request})
+            # Проверяем, что пользователь может подписаться
+            serializer.validate({})
+            # Создаем запись о подписке
+            Follow.objects.create(user=request.user, author=author)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        elif request.method == 'DELETE':
+            # Удаляем подписку
+            subscription = Follow.objects.filter(
+                user=request.user, author=author).first()
+            if subscription:
+                subscription.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({'detail': 'Вы не подписаны на этого автора'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'],
+            permission_classes=(IsAuthenticated,),
+            pagination_class=CustomPagination)
+    def subscriptions(self, request):
+        queryset = User.objects.filter(follower__user=request.user)
+        page = self.paginate_queryset(queryset)
+        serializer = SubscribeAuthorSerializer(page,
+                                            many=True,
+                                            context={'request': request})
+        return self.get_paginated_response(serializer.data)

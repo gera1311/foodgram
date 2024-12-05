@@ -52,6 +52,7 @@ class Recipe(models.Model):
         models.CASCADE,
         related_name='author_recipe',
         blank=True,
+        null=True,  #Убрать
         verbose_name='Автор'
     )
 
@@ -64,11 +65,20 @@ class Recipe(models.Model):
 
 
 class Favorite(models.Model):
+    'Модель избранного'
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
         related_name='favorite_recipe_list',
-        blank=True
+        blank=True,
+        null=True
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='favorite_recipe_list',
+        blank=True,
+        null=True
     )
 
 

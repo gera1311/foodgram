@@ -195,3 +195,47 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             )
 
         return super().update(instance, validated_data)
+
+
+class SubscribeAuthorSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'avatar', 'is_subscribed', 'recipes', 'recipes_count')
+
+    def get_recipes(self, obj):
+        # Получаем список рецептов автора
+        recipes = obj.author_recipe.all()  # Предполагаем, что related_name = 'author_recipe'
+        return [
+            {
+                "id": recipe.id,
+                "name": recipe.name,
+                "image": recipe.image.url if recipe.image else None,
+                "cooking_time": recipe.cooking_time
+            }
+            for recipe in recipes
+        ]
+
+    def get_recipes_count(self, obj):
+        # Подсчитываем количество рецептов автора
+        return obj.author_recipe.count()
+
+    def get_is_subscribed(self, obj):
+        # Проверяем, подписан ли текущий пользователь на данного автора
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Follow.objects.filter(user=request.user, author=obj).exists()
+        return False
+
+    def validate(self, data):
+        """Валидация, чтобы предотвратить повторную подписку на автора."""
+        user = self.context['request'].user
+        author = self.instance  # объект User, на которого происходит подписка
+        if Follow.objects.filter(user=user, author=author).exists():
+            raise serializers.ValidationError("Вы уже подписаны на этого автора.")
+        if user == author:
+            raise serializers.ValidationError("Нельзя подписаться на самого себя.")
+        return data
