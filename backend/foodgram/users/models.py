@@ -8,7 +8,7 @@ class User(AbstractUser):
         unique=True,
     )
     avatar = models.ImageField(
-        upload_to='avatars/', null=True, blank=True, verbose_name='Аватар'
+        upload_to='users/', null=True, blank=True, verbose_name='Аватар'
     )
 
     USERNAME_FIELD = 'email'

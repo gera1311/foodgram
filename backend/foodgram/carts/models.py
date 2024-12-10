@@ -7,12 +7,11 @@ from recipes.models import Recipe
 class ShoppingCart(models.Model):
     '''Модель списка покупок'''
     recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='shopping_carts'
+        Recipe, on_delete=models.CASCADE, related_name='shopping_cart'
     )
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='shopping_carts'
+        User, on_delete=models.CASCADE, related_name='shopping_cart'
     )
-    quantity = models.IntegerField
 
     class Meta:
         verbose_name = 'Продуктовая корзина'
