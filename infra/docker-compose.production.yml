@@ -9,10 +9,7 @@ services:
       - ../.env
   
   backend:
-      build:
-        context: ../backend
-        dockerfile: Dockerfile
-      restart: always
+      image: gera1311/foodgram_backend:latest
       volumes:
         - static:/backend_static
         - media:/app/media_foodgram/
@@ -22,28 +19,26 @@ services:
         - ../.env
 
   frontend:
-    build: ../frontend
+    image: gera1311/foodgram_frontend:latest
+    command: cp -r /app/build/. /frontend_static/
     volumes:
-      - ../frontend/:/app/result_build/
+      - static:/frontend_static 
     depends_on:
       - backend
+    env_file:
+      - ../.env
 
   nginx:
-    image: nginx:1.22.1
+    image: gera1311/foodgram_gateway:latest
     ports:
       - "80:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ../frontend/build:/usr/share/nginx/html/
-      - ../docs/:/usr/share/nginx/html/api/docs/
-      - static:/staticfiles/static
+      - static:/var/html/static/
       - media:/var/html/media/
     depends_on:
       - frontend
-    restart: always
 
 volumes:
   db_data:
   static:
   media:
-
