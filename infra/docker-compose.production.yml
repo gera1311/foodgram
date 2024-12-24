@@ -35,7 +35,7 @@ services:
   nginx:
     image: gera1311/foodgram_gateway:latest
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
       - static:/staticfiles
       - media:/mediafiles/media
