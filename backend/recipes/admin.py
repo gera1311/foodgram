@@ -3,17 +3,15 @@ from django.contrib import admin
 from .models import Recipe, Tag, Ingredient, RecipeIngredient
 
 
-# class RecipeAdmin(admin.ModelAdmin):
-#     list_display = ['name', 'cooking_time', 'text', 'image']
-
 class IngredientAdmin(admin.ModelAdmin):
-    search_fields = ['name']  # По какому полю искать в списке ингредиентов
+    search_fields = ['name']
 
 
-class RecipeIngredientInline(admin.TabularInline):  # Можно использовать StackedInline для более подробного вида
+class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
-    extra = 1  # Количество пустых форм для добавления по умолчанию
-    autocomplete_fields = ['ingredient']  # Автозаполнение для поля ингредиента (если нужно)
+    extra = 1
+    autocomplete_fields = ['ingredient']
+
 
 class RecipeAdmin(admin.ModelAdmin):
     inlines = [RecipeIngredientInline]
