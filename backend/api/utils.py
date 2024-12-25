@@ -25,7 +25,7 @@ class ShoppingCartFileGenerator:
         '''Генерация файла в формате TXT'''
         content = 'Список покупок:\n\n'
         for name, data in ingredients.items():
-            content += f'- {name}: {data['amount']} {data['unit']}\n'
+            content += f'- {name}: {data["amount"]} {data["unit"]}\n'
         response = HttpResponse(content, content_type='text/plain')
         response['Content-Disposition'] = 'attachment; \
             filename="shopping_list.txt'
