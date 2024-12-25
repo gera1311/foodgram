@@ -1,7 +1,7 @@
 import pyshorteners
 
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, mixins, status, serializers
+from rest_framework import viewsets, mixins, status, serializers, filters
 from rest_framework.response import Response
 from rest_framework.permissions import (IsAuthenticated,
                                         AllowAny,
@@ -188,8 +188,15 @@ class IngredientViewSet(mixins.RetrieveModelMixin,
                         mixins.ListModelMixin,
                         viewsets.GenericViewSet):
     queryset = Ingredient.objects.all()
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['name']
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        name = self.request.query_params.get('name')
+        if name:
+            return queryset.filter(name__icontains=name)
+        return queryset
 
     def get_serializer_class(self):
         if self.action in ['create']:
