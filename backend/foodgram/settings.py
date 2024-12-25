@@ -28,6 +28,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', get_random_secret_key())
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['foodgram.shop', '127.0.0.1', 'localhost']
+CSRF_TRUSTED_ORIGINS = ['https://foodgram.shop', 'http://foodgram.shop']
 
 
 # Application definition
