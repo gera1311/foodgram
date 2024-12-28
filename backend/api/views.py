@@ -23,7 +23,8 @@ from .serializers import (ListRetrieveRecipeSerializer,
                           IngredientCreateSerializer,
                           UserSerializer,
                           UserCreateSerializer,
-                          SubscribeAuthorSerializer)
+                          SubscribeAuthorSerializer,
+                          FavoriteSerializer)
 from .pagination import CustomPagination
 from .permissions import IsRecipeAuthor
 from .utils import decode_base64_image, ShoppingCartFileGenerator
@@ -87,14 +88,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 return Response({'detail': 'Рецепт уже в избранном.'},
                                 status=status.HTTP_400_BAD_REQUEST)
             recipe.favorites.add(user)
-            data = {
-                "id": recipe.id,
-                "name": recipe.name,
-                "image": request.build_absolute_uri(
-                    recipe.image.url) if recipe.image else None,
-                "cooking_time": recipe.cooking_time
-            }
-            return Response(data, status=status.HTTP_201_CREATED)
+            serializer = FavoriteSerializer(recipe,
+                                            context={'request': request})
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             if not recipe.favorites.filter(id=user.id).exists():
