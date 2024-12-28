@@ -88,7 +88,6 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-    """Сериализатор для связи рецепт-ингредиент с количеством."""
     id = serializers.PrimaryKeyRelatedField(
         queryset=Ingredient.objects.all()
     )
@@ -109,22 +108,18 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'image', 'cooking_time']
 
     def add_to_cart(self, user):
-        """Метод для добавления рецепта в корзину"""
         recipe = self.instance
         if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
             raise serializers.ValidationError('Рецепт уже добавлен в корзину.')
 
-        # Создаем запись в корзине
         ShoppingCart.objects.create(user=user, recipe=recipe)
 
-        # Обновляем поле is_in_shopping_cart в модели Recipe
         recipe.is_in_shopping_cart = True
         recipe.save()
 
         return recipe
 
     def remove_from_cart(self, user):
-        """Метод для удаления рецепта из корзины"""
         recipe = self.instance
         cart_item = ShoppingCart.objects.filter(user=user, recipe=recipe)
         if not cart_item.exists():
@@ -293,7 +288,7 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
         return representation
 
     def validate(self, data):
-        # Проверка наличия и непустоты ингредиентов
+        # Проверка наличия ингредиентов
         ingredients = data.get('recipe_ingredients', [])
         if not ingredients:
             raise serializers.ValidationError(
@@ -320,7 +315,7 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
                 {'image': 'Не указано изображение.'}
             )
 
-        # Проверка наличия и непустоты тегов
+        # Проверка наличия тегов
         tags = data.get('tags', [])
         if not tags:
             raise serializers.ValidationError(
