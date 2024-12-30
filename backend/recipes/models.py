@@ -1,10 +1,19 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 
+from foodgram.settings import (
+    MAX_LENGTH_FOR_SHORT_VARIABLE, MAX_LENGTH_FOR_DESCRIPTION)
+
+User = get_user_model()
+
 
 class Tag(models.Model):
-    name = models.CharField(max_length=50, verbose_name='Название')
-    slug = models.SlugField(max_length=25, verbose_name='Slug')
+    name = models.CharField(
+        max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
+        verbose_name='Название')
+    slug = models.SlugField(
+        max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
+        verbose_name='Slug')
 
     def __str__(self):
         return self.name
@@ -15,9 +24,14 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    name = models.CharField(max_length=255, verbose_name='Название')
+    name = models.CharField(
+        max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
+        verbose_name='Название'
+    )
     measurement_unit = models.CharField(
-        max_length=100, verbose_name='Единица измерения')
+        max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
+        verbose_name='Единица измерения'
+    )
 
     def __str__(self):
         return self.name
@@ -28,27 +42,30 @@ class Ingredient(models.Model):
 
 
 class Recipe(models.Model):
-    name = models.CharField(max_length=255, verbose_name='Название')
+    name = models.CharField(
+        max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
+        verbose_name='Название'
+    )
     ingredients = models.ManyToManyField(
         Ingredient, through='RecipeIngredient',
         related_name='ingredient_recipes',
         verbose_name='Ингредиенты'
     )
     tags = models.ManyToManyField(Tag, blank=True, verbose_name='Теги')
-    cooking_time = models.IntegerField(default=10,
-                                       verbose_name='Время приготовления')
-    text = models.CharField(max_length=256, verbose_name='Описание')
+    cooking_time = models.IntegerField(verbose_name='Время приготовления')
+    text = models.CharField(max_length=MAX_LENGTH_FOR_DESCRIPTION,
+                            verbose_name='Описание')
     image = models.ImageField(upload_to='recipes/images/',
                               verbose_name='Изображение')
     favorites = models.ManyToManyField(
-        get_user_model(),
+        User,
         related_name='favorites_recipe',
         blank=True,
         verbose_name='Подписки'
     )
     author = models.ForeignKey(
-        get_user_model(),
-        models.CASCADE,
+        User,
+        on_delete=models.CASCADE,
         related_name='author_recipes',
         blank=True,
         verbose_name='Автор'
@@ -63,34 +80,67 @@ class Recipe(models.Model):
 
 
 class Favorite(models.Model):
-    'Модель избранного'
     user = models.ForeignKey(
-        get_user_model(),
+        User,
         on_delete=models.CASCADE,
         related_name='favorite_recipe',
+        verbose_name='Пользователь'
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
         related_name='favorite_recipe',
+        verbose_name='Рецепт'
     )
+
+    class Meta:
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранные рецепты'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_favorite'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.user} → {self.recipe}'
 
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
-                               related_name='recipe_ingredients')
+                               related_name='recipe_ingredients',
+                               verbose_name='Рецепт')
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
-                                   related_name='recipe_ingredients')
-    amount = models.CharField(blank=True, null=True, max_length=100)
+                                   related_name='recipe_ingredients',
+                                   verbose_name='Ингредиент')
+    amount = models.CharField(blank=True,
+                              null=True,
+                              max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
+                              verbose_name='Количество')
 
     class Meta:
-        unique_together = ('recipe', 'ingredient')
+        verbose_name = 'Ингредиент рецепта'
+        verbose_name_plural = 'Ингредиенты рецепта'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='unique_recipe_ingredient'
+            )
+        ]
 
 
 class RecipeTag(models.Model):
     recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='recipe_tags'
+        Recipe, on_delete=models.CASCADE, related_name='recipe_tags',
+        verbose_name='Рецепт'
     )
     tag = models.ForeignKey(
-        Tag, on_delete=models.CASCADE
+        Tag, on_delete=models.CASCADE,
+        verbose_name='Тег'
     )
+
+    class Meta:
+        verbose_name = 'Тег рецепта'
+        verbose_name_plural = 'Теги рецепта'
+        ordering = ['recipe', 'tag__name']

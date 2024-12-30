@@ -169,3 +169,7 @@ DJOSER = {
     'USER_ID_FIELD': 'email',
     'LOGIN_FIELD': 'email',
 }
+
+# Variable for models
+MAX_LENGTH_FOR_SHORT_VARIABLE = 50
+MAX_LENGTH_FOR_DESCRIPTION = 256
