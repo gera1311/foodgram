@@ -7,6 +7,8 @@ from django.http import HttpResponse
 from django.core.files.base import ContentFile
 from reportlab.pdfgen import canvas
 
+from recipes.models import RecipeIngredient
+
 
 def decode_base64_image(data, folder_name):
     try:
@@ -18,6 +20,26 @@ def decode_base64_image(data, folder_name):
         return file_name, ContentFile(img_data)
     except (ValueError, IndexError, TypeError) as e:
         raise ValueError('Некорректный формат изображения') from e
+
+
+def process_ingredients(recipe, ingredients_data):
+    """
+    Обрабатывает ингредиенты для рецепта:
+    - Удаляет старые связи.
+    - Создает новые записи через bulk_create.
+    """
+    RecipeIngredient.objects.filter(recipe=recipe).delete()
+
+    recipe_ingredients = [
+        RecipeIngredient(
+            recipe=recipe,
+            ingredient=ingredient_data['id'],
+            amount=ingredient_data['amount']
+        )
+        for ingredient_data in ingredients_data
+    ]
+
+    RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
 
 class ShoppingCartFileGenerator:

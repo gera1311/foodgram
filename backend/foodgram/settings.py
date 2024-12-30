@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'carts.apps.CartsConfig',
     'recipes.apps.RecipesConfig',
     'users.apps.UsersConfig',
+    'shortener.apps.ShortenerConfig'
 ]
 
 MIDDLEWARE = [

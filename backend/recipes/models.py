@@ -49,7 +49,7 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         get_user_model(),
         models.CASCADE,
-        related_name='author_recipe',
+        related_name='author_recipes',
         blank=True,
         verbose_name='Автор'
     )
@@ -67,12 +67,12 @@ class Favorite(models.Model):
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
-        related_name='favorite_recipe_list',
+        related_name='favorite_recipe',
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='favorite_recipe_list',
+        related_name='favorite_recipe',
     )
 
 

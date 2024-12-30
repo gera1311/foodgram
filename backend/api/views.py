@@ -1,17 +1,16 @@
-import pyshorteners
-
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, mixins, status, serializers, filters
+from django.db.models import Sum
+from rest_framework import viewsets, mixins, status, filters
 from rest_framework.response import Response
 from rest_framework.permissions import (IsAuthenticated,
                                         AllowAny,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.decorators import action
-from djoser.serializers import SetPasswordSerializer as \
-    DjoserSetPasswordSerializer
+from djoser.serializers import (
+    SetPasswordSerializer as DjoserSetPasswordSerializer)
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .filters import RecipeFilter
+from .filters import RecipeFilter, IngredientFilter
 from recipes.models import Recipe, Ingredient, Tag, RecipeIngredient
 from users.models import User, Follow
 from carts.models import ShoppingCart
@@ -27,7 +26,9 @@ from .serializers import (ListRetrieveRecipeSerializer,
                           FavoriteSerializer)
 from .pagination import CustomPagination
 from .permissions import IsRecipeAuthor
-from .utils import decode_base64_image, ShoppingCartFileGenerator
+from .utils import (
+    decode_base64_image, ShoppingCartFileGenerator)
+from shortener.views import create_short_link
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -52,29 +53,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='get-link')
     def get_short_link(self, request, pk=None):
-        try:
-            # Получаем рецепт
-            recipe = self.get_object()
-
-            # Формируем полный URL рецепта
-            full_url = request.build_absolute_uri(f'/api/recipes/{recipe.id}/')
-
-            # Генерируем короткую ссылку
-            shortener = pyshorteners.Shortener()
-            short_url = shortener.tinyurl.short(full_url)
-
-            short_link = short_url.replace('tinyurl.com',
-                                           'foodgram.example.org/s')
-
-            # Возвращаем короткую ссылку
-            return Response({'short-link': short_link},
-                            status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response(
-                {'error': f'Не удалось создать короткую ссылку: {str(e)}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        recipe = self.get_object()
+        full_url = request.build_absolute_uri(f'/api/recipes/{recipe.id}/')
+        short_link = create_short_link(full_url)
+        short_url = request.build_absolute_uri(f'/s/{short_link.short_code}/')
+        return Response({'short-link': short_url}, status=status.HTTP_200_OK)
 
     @action(detail=True,
             methods=['post', 'delete'],
@@ -106,37 +89,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path='shopping_cart',
         permission_classes=(IsAuthenticated,)
     )
-    def add_to_shopping_cart(self, request, pk=None):
-        try:
-            recipe = Recipe.objects.get(pk=pk)
-        except Recipe.DoesNotExist:
-            return Response(
-                {'error': 'Рецепт не найден'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Сериализуем рецепт
-        serializer = ShoppingCartSerializer(recipe,
-                                            context={'request': request})
+    def add_to_shopping_cart(self, request, **kwargs):
+        recipe = get_object_or_404(Recipe, id=kwargs['pk'])
 
         if request.method == 'POST':
-            # Добавляем рецепт в корзину
-            try:
-                serializer.add_to_cart(request.user)
+            serializer = ShoppingCartSerializer(
+                recipe, data=request.data,
+                context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            if not ShoppingCart.objects.filter(user=request.user,
+                                               recipe=recipe).exists():
+                ShoppingCart.objects.create(user=request.user, recipe=recipe)
                 return Response(serializer.data,
                                 status=status.HTTP_201_CREATED)
-            except serializers.ValidationError as e:
-                return Response({'error': e},
-                                status=status.HTTP_400_BAD_REQUEST)
+            return Response({'errors': 'Рецепт уже в списке покупок.'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         if request.method == 'DELETE':
-            # Удаляем рецепт из корзины
-            try:
-                serializer.remove_from_cart(request.user)
+            shopping_cart_item = ShoppingCart.objects.filter(
+                user=request.user, recipe=recipe).first()
+            if shopping_cart_item:
+                shopping_cart_item.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            except serializers.ValidationError as e:
-                return Response({'error': e},
-                                status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'errors': 'Этот рецепт не найден в списке покупок.'},
+                status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False,
             methods=['get'],
@@ -150,30 +127,33 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
 
         # Подсчитываем ингредиенты
-        ingredients = {}
-        for item in shopping_cart:
-            recipe = item.recipe
-            for recipe_ingredient in RecipeIngredient.objects.filter(
-                    recipe=recipe):
-                ingredient = recipe_ingredient.ingredient
-                if ingredient.name in ingredients:
-                    ingredients[ingredient.name]['amount'] += (
-                        recipe_ingredient.amount)
-                else:
-                    ingredients[ingredient.name] = {
-                        'amount': recipe_ingredient.amount,
-                        'unit': ingredient.measurement_unit,
-                    }
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__shopping_recipe__user=request.user
+        ).values(
+            'ingredient__name',
+            'ingredient__measurement_unit'
+        ).annotate(
+            total_amount=Sum('amount')
+        )
+
+        # Преобразуем в словарь для дальнейшего использования
+        ingredients_dict = {
+            ingredient['ingredient__name']: {
+                'amount': ingredient['total_amount'],
+                'unit': ingredient['ingredient__measurement_unit'],
+            }
+            for ingredient in ingredients
+        }
 
         # Генерация файла
         file_format = request.query_params.get('format', 'txt')
         file_generator = ShoppingCartFileGenerator()
         if file_format == 'txt':
-            return file_generator.generate_txt(ingredients)
+            return file_generator.generate_txt(ingredients_dict)
         elif file_format == 'pdf':
-            return file_generator.generate_pdf(ingredients)
+            return file_generator.generate_pdf(ingredients_dict)
         elif file_format == 'csv':
-            return file_generator.generate_csv(ingredients)
+            return file_generator.generate_csv(ingredients_dict)
         else:
             return Response(
                 {'error': 'Укажите формат файла (txt, pdf, csv) в запросе.'},
@@ -185,22 +165,15 @@ class IngredientViewSet(mixins.RetrieveModelMixin,
                         mixins.ListModelMixin,
                         viewsets.GenericViewSet):
     queryset = Ingredient.objects.all()
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['name']
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        name = self.request.query_params.get('name')
-        if name:
-            return queryset.filter(name__icontains=name)
-        return queryset
+    filterset_class = IngredientFilter
+    http_method_names = ['get']
 
     def get_serializer_class(self):
         if self.action in ['create']:
             return IngredientCreateSerializer
         return IngredientSerializer
-
-    http_method_names = ['get']
 
 
 class TagViewSet(mixins.RetrieveModelMixin,
@@ -237,14 +210,12 @@ class UserViewSet(mixins.CreateModelMixin,
             methods=['post'],
             permission_classes=(IsAuthenticated,))
     def set_password(self, request):
-        print("Request data:", request.data)
         serializer = DjoserSetPasswordSerializer(
             instance=request.user,
             data=request.data,
             context={'request': request}
         )
         if serializer.is_valid(raise_exception=True):
-            print("Password valid:", serializer.validated_data)
             request.user.set_password(
                 serializer.validated_data['new_password'])
             request.user.save()
@@ -296,8 +267,14 @@ class UserViewSet(mixins.CreateModelMixin,
 
         if request.method == 'POST':
             serializer = SubscribeAuthorSerializer(
-                author, context={'request': request})
-            serializer.validate({})
+                author, data=request.data, context={'request': request})
+            if not serializer.is_valid(raise_exception=True):
+                return Response(
+                    serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                )
+            if Follow.objects.filter(user=request.user,
+                                     author=author).exists():
+                return Response(status=status.HTTP_400_BAD_REQUEST)
             Follow.objects.create(user=request.user, author=author)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
