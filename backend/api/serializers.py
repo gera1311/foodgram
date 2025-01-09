@@ -158,17 +158,16 @@ class SubscribeAuthorSerializer(serializers.ModelSerializer):
                                          author=obj).exists()
         return False
 
-    def validate(self, data):
-        """Валидация, чтобы предотвратить повторную подписку на автора."""
+    def validate(self, obj):
         user = self.context['request'].user
         author = self.instance
-        if Follow.objects.filter(user=user, author=author).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого автора.')
         if user == author:
             raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя.')
-        return data
+                'Нельзя подписаться на самого себя.'
+            )
+        if (self.context['request'].user == obj):
+            raise serializers.ValidationError({'errors': 'Ошибка подписки.'})
+        return obj
 
 
 class AuthorForRecipeSerializer(SubscribeAuthorSerializer):
@@ -262,8 +261,11 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
         return False
 
     def get_is_in_shopping_cart(self, obj):
-        user = self.context['request'].user
-        return obj.shopping_recipe.filter(id=user.id).exists()
+        request = self.context.get('request')
+        user = request.user if request else None
+        if user and user.is_authenticated:
+            return obj.shopping_recipe.filter(id=user.id).exists()
+        return False
 
     def to_representation(self, instance):
         """
@@ -352,6 +354,7 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
         return recipe
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         # Удаляем старые связи и пересоздаем их
         ingredients_data = validated_data.pop('recipe_ingredients')

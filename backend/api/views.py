@@ -1,5 +1,4 @@
 from django.shortcuts import get_object_or_404
-from django.db.models import Sum
 from rest_framework import viewsets, mixins, status, filters
 from rest_framework.response import Response
 from rest_framework.permissions import (IsAuthenticated,
@@ -11,7 +10,7 @@ from djoser.serializers import (
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .filters import RecipeFilter, IngredientFilter
-from recipes.models import Recipe, Ingredient, Tag, RecipeIngredient
+from recipes.models import Recipe, Ingredient, Tag
 from users.models import User, Follow
 from carts.models import ShoppingCart
 from .serializers import (ListRetrieveRecipeSerializer,
@@ -27,7 +26,9 @@ from .serializers import (ListRetrieveRecipeSerializer,
 from .pagination import CustomPagination
 from .permissions import IsRecipeAuthor
 from .utils import (
-    decode_base64_image, ShoppingCartFileGenerator)
+    decode_base64_image,
+    generate_shopping_cart_report,
+    handle_add_remove_action)
 from shortener.views import create_short_link
 
 
@@ -95,15 +96,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'POST':
             serializer = ShoppingCartSerializer(
                 recipe, data=request.data,
-                context={'request': request})
+                context={'request': request}
+            )
             serializer.is_valid(raise_exception=True)
-            if not ShoppingCart.objects.filter(user=request.user,
-                                               recipe=recipe).exists():
-                ShoppingCart.objects.create(user=request.user, recipe=recipe)
-                return Response(serializer.data,
-                                status=status.HTTP_201_CREATED)
-            return Response({'errors': 'Рецепт уже в списке покупок.'},
-                            status=status.HTTP_400_BAD_REQUEST)
+            data = {'user': request.user, 'recipe': recipe}
+            return handle_add_remove_action(
+                model=ShoppingCart, data=data,
+                error_message='Рецепт уже в списке покупок.',
+                success_message=serializer.data
+            )
 
         if request.method == 'DELETE':
             shopping_cart_item = ShoppingCart.objects.filter(
@@ -119,46 +120,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
             methods=['get'],
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
-        shopping_cart = ShoppingCart.objects.filter(user=request.user)
-        if not shopping_cart.exists():
-            return Response(
-                {'error': 'Корзина покупок пуста.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Подсчитываем ингредиенты
-        ingredients = RecipeIngredient.objects.filter(
-            recipe__shopping_recipe__user=request.user
-        ).values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(
-            total_amount=Sum('amount')
-        )
-
-        # Преобразуем в словарь для дальнейшего использования
-        ingredients_dict = {
-            ingredient['ingredient__name']: {
-                'amount': ingredient['total_amount'],
-                'unit': ingredient['ingredient__measurement_unit'],
-            }
-            for ingredient in ingredients
-        }
-
-        # Генерация файла
         file_format = request.query_params.get('format', 'txt')
-        file_generator = ShoppingCartFileGenerator()
-        if file_format == 'txt':
-            return file_generator.generate_txt(ingredients_dict)
-        elif file_format == 'pdf':
-            return file_generator.generate_pdf(ingredients_dict)
-        elif file_format == 'csv':
-            return file_generator.generate_csv(ingredients_dict)
-        else:
+        file_data, error = generate_shopping_cart_report(request.user,
+                                                         file_format)
+
+        if error:
             return Response(
-                {'error': 'Укажите формат файла (txt, pdf, csv) в запросе.'},
+                {'error': error},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        return file_data
 
 
 class IngredientViewSet(mixins.RetrieveModelMixin,
@@ -272,11 +244,13 @@ class UserViewSet(mixins.CreateModelMixin,
                 return Response(
                     serializer.errors, status=status.HTTP_400_BAD_REQUEST
                 )
-            if Follow.objects.filter(user=request.user,
-                                     author=author).exists():
-                return Response(status=status.HTTP_400_BAD_REQUEST)
-            Follow.objects.create(user=request.user, author=author)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            data = {'user': request.user, 'author': author}
+            return handle_add_remove_action(
+                model=Follow,
+                data=data,
+                error_message='Вы уже подписаны на этого автора.',
+                success_message=serializer.data,
+            )
 
         elif request.method == 'DELETE':
             subscription = Follow.objects.filter(

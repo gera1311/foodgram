@@ -5,9 +5,13 @@ import csv
 from io import BytesIO
 from django.http import HttpResponse
 from django.core.files.base import ContentFile
+from django.db.models import Sum
 from reportlab.pdfgen import canvas
+from rest_framework import status
+from rest_framework.response import Response
 
 from recipes.models import RecipeIngredient
+from carts.models import ShoppingCart
 
 
 def decode_base64_image(data, folder_name):
@@ -44,7 +48,7 @@ def process_ingredients(recipe, ingredients_data):
 
 class ShoppingCartFileGenerator:
     def generate_txt(self, ingredients):
-        '''Генерация файла в формате TXT'''
+        """Генерация файла в формате TXT."""
         content = 'Список покупок:\n\n'
         for name, data in ingredients.items():
             content += f'- {name}: {data["amount"]} {data["unit"]}\n'
@@ -54,7 +58,7 @@ class ShoppingCartFileGenerator:
         return response
 
     def generate_pdf(self, ingredients):
-        '''Генерация файла в формате PDF'''
+        """Генерация файла в формате PDF."""
         buffer = BytesIO()
         p = canvas.Canvas(buffer)
         p.drawString(100, 800, "Список покупок:")
@@ -71,12 +75,63 @@ class ShoppingCartFileGenerator:
         return response
 
     def generate_csv(self, ingredients):
-        '''Генерация файла в формате CSV'''
+        """Генерация файла в формате CSV."""
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; \
             filename="shopping_list.csv"'
         writer = csv.writer(response)
         writer.writerow(['Ингредиент', 'Количество', 'Единица измерения'])
-        for name, data in ingredients.items():
-            writer.writerow([name, data['amount'], data['unit']])
+        rows = [(name, data['amount'],
+                 data['unit']) for name, data in ingredients.items()]
+        writer.writerows(rows)
         return response
+
+
+def generate_shopping_cart_report(user, file_format='txt'):
+    shopping_cart = ShoppingCart.objects.filter(user=user)
+    if not shopping_cart.exists():
+        return None, 'Корзина покупок пуста.'
+
+    # Подсчитываем ингредиенты
+    ingredients = RecipeIngredient.objects.filter(
+        recipe__shopping_recipe__user=user
+    ).values(
+        'ingredient__name',
+        'ingredient__measurement_unit'
+    ).annotate(
+        total_amount=Sum('amount')
+    )
+
+    # Преобразуем в словарь для дальнейшего использования
+    ingredients_dict = {
+        ingredient['ingredient__name']: {
+            'amount': ingredient['total_amount'],
+            'unit': ingredient['ingredient__measurement_unit'],
+        }
+        for ingredient in ingredients
+    }
+
+    # Генерация файла
+    file_generator = ShoppingCartFileGenerator()
+    if file_format == 'txt':
+        return file_generator.generate_txt(ingredients_dict), None
+    elif file_format == 'pdf':
+        return file_generator.generate_pdf(ingredients_dict), None
+    elif file_format == 'csv':
+        return file_generator.generate_csv(ingredients_dict), None
+    else:
+        return None, 'Укажите формат файла (txt, pdf, csv) в запросе.'
+
+
+def handle_add_remove_action(model,
+                             data,
+                             error_message,
+                             success_message):
+    """Обрабатывает добавление или удаление объекта в модель Many-to-Many."""
+    if model.objects.filter(**data).exists():
+        return Response({'errors': error_message},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    model.objects.create(**data)
+    return Response(success_message,
+                    status=status.HTTP_201_CREATED)
