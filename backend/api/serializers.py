@@ -367,7 +367,7 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
         RecipeIngredient.objects.filter(recipe=instance).delete()
 
         process_ingredients(recipe=instance, ingredients_data=ingredients_data)
-        
+
         if image_data:
             if instance.image:
                 instance.image.delete(save=False)
