@@ -359,6 +359,7 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
         # Удаляем старые связи и пересоздаем их
         ingredients_data = validated_data.pop('recipe_ingredients')
         tags_data = validated_data.pop('tags')
+        image_data = validated_data.pop('image', None)
 
         instance.tags.clear()
         instance.tags.set(tags_data)
@@ -366,5 +367,10 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
         RecipeIngredient.objects.filter(recipe=instance).delete()
 
         process_ingredients(recipe=instance, ingredients_data=ingredients_data)
+        
+        if image_data:
+            if instance.image:
+                instance.image.delete(save=False)
+            instance.image = image_data
 
         return super().update(instance, validated_data)

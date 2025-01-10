@@ -166,3 +166,5 @@ DJOSER = {
 # Variable for models
 MAX_LENGTH_FOR_SHORT_VARIABLE = 50
 MAX_LENGTH_FOR_DESCRIPTION = 256
+
+FRONTEND_URL = 'http://foodgram.shop'
