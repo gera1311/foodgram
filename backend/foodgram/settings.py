@@ -151,8 +151,6 @@ REST_FRAMEWORK = {
     'DEFAUL_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'api.pagination.CustomPagination',
-    'PAGE_SIZE': 6
 }
 
 DJOSER = {
