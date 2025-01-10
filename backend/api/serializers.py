@@ -356,21 +356,41 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        # Удаляем старые связи и пересоздаем их
-        ingredients_data = validated_data.pop('recipe_ingredients')
-        tags_data = validated_data.pop('tags')
+        # Извлекаем переданные данные
+        ingredients_data = validated_data.pop('recipe_ingredients', None)
+        tags_data = validated_data.pop('tags', None)
         image_data = validated_data.pop('image', None)
 
-        instance.tags.clear()
-        instance.tags.set(tags_data)
+        # Обновление тегов
+        if tags_data:
+            instance.tags.clear()
+            instance.tags.set(tags_data)
 
-        RecipeIngredient.objects.filter(recipe=instance).delete()
+        # Обновление ингредиентов только если они изменились
+        if ingredients_data:
+            # Получаем текущие ингредиенты, связанные с рецептом
+            current_ingredients = set(
+                instance.recipe_ingredients.values_list(
+                    'ingredient_id', flat=True))
 
-        process_ingredients(recipe=instance, ingredients_data=ingredients_data)
+            # Получаем новые ингредиенты из запроса
+            new_ingredients = {
+                ingredient['id'] for ingredient in ingredients_data
+            }
 
+            if current_ingredients != new_ingredients:
+                # Удаляем старые связи
+                instance.recipe_ingredients.all().delete()
+
+                # Добавляем новые ингредиенты
+                process_ingredients(recipe=instance,
+                                    ingredients_data=ingredients_data)
+
+        # Обработка изображения
         if image_data:
-            if instance.image:
-                instance.image.delete(save=False)
+            if instance.image and instance.image != image_data:
+                instance.image.delete()
             instance.image = image_data
 
+        # Обновление других данных рецепта
         return super().update(instance, validated_data)
