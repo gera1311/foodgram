@@ -26,8 +26,9 @@ def handle_short_link(request, short_code):
     try:
         # Ищем короткую ссылку в базе данных
         short_link = ShortLink.objects.get(short_code=short_code)
+        # Перенаправляем на оригинальный URL
         recipe_id = short_link.recipe.id
-        return HttpResponseRedirect(f'{FRONTEND_URL}/recipe/{recipe_id}')
+        return HttpResponseRedirect(f'{FRONTEND_URL}/recipes/{recipe_id}')
     except ShortLink.DoesNotExist:
         # Если короткая ссылка не найдена
         return HttpResponseNotFound('Короткая ссылка недействительна.')
