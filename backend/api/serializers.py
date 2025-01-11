@@ -372,7 +372,6 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             validated_data['image'] = instance.image
 
         if ingredients_data is not None:
-            RecipeIngredient.objects.filter(recipe=instance).delete()
             process_ingredients(recipe=instance,
                                 ingredients_data=ingredients_data)
 
