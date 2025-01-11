@@ -362,13 +362,11 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
         instance.tags.clear()
         instance.tags.set(tags_data)
 
-        existing_ingredients = set(Ingredient.objects.values_list(
-            'id', flat=True))
-        for ingredient in ingredients_data:
-            # Если ингредиент существует в базе, уменьшаем его id на 1
-            if ingredient['id'] in existing_ingredients:
-                ingredient['id'] -= 1
-        process_ingredients(
-            recipe=instance, ingredients_data=ingredients_data)
+        for ingredient_data in ingredients_data:
+            ingredient = Ingredient.objects.filter(
+                id=ingredient_data['id']).first()
+            if ingredient:
+                ingredient_data['id'] = ingredient.id - 1
+        process_ingredients(instance, ingredients_data)
 
         return super().update(instance, validated_data)
