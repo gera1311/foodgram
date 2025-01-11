@@ -4,7 +4,6 @@ import string
 from django.http import HttpResponseRedirect, HttpResponseNotFound
 
 from .models import ShortLink
-from foodgram.settings import FRONTEND_URL
 
 
 def generate_short_code(length=6):
@@ -27,8 +26,7 @@ def handle_short_link(request, short_code):
         # Ищем короткую ссылку в базе данных
         short_link = ShortLink.objects.get(short_code=short_code)
         # Перенаправляем на оригинальный URL
-        recipe_id = short_link.recipe.id
-        return HttpResponseRedirect(f'{FRONTEND_URL}/recipes/{recipe_id}')
+        return HttpResponseRedirect(short_link.original_url)
     except ShortLink.DoesNotExist:
         # Если короткая ссылка не найдена
         return HttpResponseNotFound('Короткая ссылка недействительна.')
