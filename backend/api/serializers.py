@@ -301,12 +301,11 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
                     {'ingredients': 'Количество ингредиента должно быть > 0.'}
                 )
 
+        request = self.context['request']
         # Проверка, что изображение передано в запросе
-        image = data.get('image', [])
-        if not image:
+        if request.method == 'POST' and not data.get('image'):
             raise serializers.ValidationError(
-                {'image': 'Не указано изображение.'}
-            )
+                {'image': 'Не указано изображение!'})
 
         # Проверка наличия тегов
         tags = data.get('tags', [])
