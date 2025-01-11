@@ -370,16 +370,9 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             # Если изображение не передано, оставляем старое
             validated_data['image'] = instance.image
 
-        if ingredients_data:
-            RecipeIngredient.objects.filter(recipe=instance).exclude(
-                ingredient_id__in=[ing['id'] for ing in ingredients_data]
-            ).delete()
-
-            for ingredient_data in ingredients_data:
-                RecipeIngredient.objects.update_or_create(
-                    recipe=instance,
-                    ingredient_id=ingredient_data['id'],
-                    defaults={'amount': ingredient_data['amount']}
-                )
+        if ingredients_data is not None:
+            RecipeIngredient.objects.filter(recipe=instance).delete()
+            process_ingredients(recipe=instance,
+                                ingredients_data=ingredients_data)
 
         return super().update(instance, validated_data)
