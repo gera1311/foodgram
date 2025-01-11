@@ -330,16 +330,6 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
                 'Время приготовления не может быть меньше 1 минуты.')
         return value
 
-    def create_ingredients(self, recipe, ingredients):
-        RecipeIngredient.objects.bulk_create(
-            RecipeIngredient(
-                recipe=recipe,
-                ingredient_id=ingredient['id'],
-                amount=ingredient['amount']
-            )
-            for ingredient in ingredients
-        )
-
     @transaction.atomic
     def create(self, validated_data):
         # Извлекаем связанные данные
@@ -366,14 +356,14 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        ingredients_data = self.initial_data.pop('ingredients')
+        ingredients_data = validated_data.pop('recipe_ingredients')
         tags_data = validated_data.pop('tags')
 
         instance.tags.clear()
         instance.tags.set(tags_data)
 
         RecipeIngredient.objects.filter(recipe=instance).all().delete()
-        self.create_ingredients(instance, ingredients_data)
+        process_ingredients(instance, ingredients_data)
 
         # process_ingredients(instance, ingredients_data)
         return super().update(instance, validated_data)
