@@ -302,7 +302,8 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
                 )
 
         # Проверка, что изображение передано в запросе
-        if 'image' not in data and not self.initial_data.get('image', None):
+        image = data.get('image', [])
+        if not image:
             raise serializers.ValidationError(
                 {'image': 'Не указано изображение.'}
             )
@@ -362,7 +363,13 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             instance.tags.clear()
             instance.tags.set(tags_data)
 
-        instance.image = validated_data.get('image', instance.image)
+        # Проверка и обновление изображения
+        image = validated_data.get('image', None)
+        if image:
+            instance.image = image  # Если новое изображение передано
+        else:
+            # Если изображение не передано, оставляем старое
+            validated_data['image'] = instance.image
 
         RecipeIngredient.objects.filter(recipe=instance).delete()
 
