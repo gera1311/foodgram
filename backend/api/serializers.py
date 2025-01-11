@@ -372,6 +372,8 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             validated_data['image'] = instance.image
 
         if ingredients_data is not None:
+            for ingredient in ingredients_data:
+                ingredient['id'] -= 1
             process_ingredients(recipe=instance,
                                 ingredients_data=ingredients_data)
 
