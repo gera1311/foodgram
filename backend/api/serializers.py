@@ -329,7 +329,7 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Время приготовления не может быть меньше 1 минуты.')
         return value
-    
+
     def create_ingredients(self, recipe, ingredients):
         RecipeIngredient.objects.bulk_create(
             RecipeIngredient(
