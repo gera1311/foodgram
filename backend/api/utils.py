@@ -37,12 +37,11 @@ def process_ingredients(recipe, ingredients_data):
     recipe_ingredients = [
         RecipeIngredient(
             recipe=recipe,
-            ingredient=ingredient_data['id'] - 1,
-            amount=ingredient_data['amount']
+            ingredient_id=ingredients_data[i]['id'],
+            amount=ingredients_data[i]['amount']
         )
-        for ingredient_data in ingredients_data
+        for i in range(len(ingredients_data))
     ]
-
     RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
 
