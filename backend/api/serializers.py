@@ -356,24 +356,14 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients', None)
-        tags_data = validated_data.pop('tags', None)
+        ingredients_data = validated_data.pop('recipe_ingredients')
+        tags_data = validated_data.pop('tags')
 
-        if tags_data is not None:
-            instance.tags.clear()
-            instance.tags.set(tags_data)
+        instance.tags.clear()
+        instance.tags.set(tags_data)
 
-        # Проверка и обновление изображения
-        image = validated_data.get('image', None)
-        if image:
-            instance.image = image
-        else:
-            # Если изображение не передано, оставляем старое
-            validated_data['image'] = instance.image
+        RecipeIngredient.objects.filter(recipe=instance).delete()
 
-        if ingredients_data is not None:
-            RecipeIngredient.objects.filter(recipe=instance).delete()
-            process_ingredients(recipe=instance,
-                                ingredients_data=ingredients_data)
+        process_ingredients(recipe=instance, ingredients_data=ingredients_data)
 
         return super().update(instance, validated_data)
