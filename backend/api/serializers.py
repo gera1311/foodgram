@@ -366,7 +366,6 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             ingredient = Ingredient.objects.filter(
                 id=ingredient_data['id']).first()
             if ingredient:
-                ingredient_data['id'] = ingredient.id - 1
+                ingredient_data['id'] = ingredient.id
         process_ingredients(instance, ingredients_data)
-
         return super().update(instance, validated_data)
