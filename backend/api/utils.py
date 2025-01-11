@@ -32,31 +32,18 @@ def process_ingredients(recipe, ingredients_data):
     - Удаляет старые связи.
     - Создает новые записи через bulk_create.
     """
-    existing_ingredients = {
-        ing.ingredient_id: ing for ing in RecipeIngredient.objects.filter(
-            recipe=recipe)
-    }
+    RecipeIngredient.objects.filter(recipe=recipe).delete()
 
-    new_ingredients = {item['id']: item['amount'] for item in ingredients_data}
+    recipe_ingredients = [
+        RecipeIngredient(
+            recipe=recipe,
+            ingredient=ingredient_data['id'],
+            amount=ingredient_data['amount']
+        )
+        for ingredient_data in ingredients_data
+    ]
 
-    # Обновляем существующие ингредиенты или добавляем новые
-    for ingredient_id, amount in new_ingredients.items():
-        if ingredient_id in existing_ingredients:
-            ingredient = existing_ingredients[ingredient_id]
-            if ingredient.amount != amount:
-                ingredient.amount = amount
-                ingredient.save()
-        else:
-            RecipeIngredient.objects.create(
-                recipe=recipe,
-                ingredient_id=ingredient_id,
-                amount=amount
-            )
-
-    # Удаляем ингредиенты, которые убраны из рецепта
-    for ingredient_id in existing_ingredients.keys():
-        if ingredient_id not in new_ingredients:
-            existing_ingredients[ingredient_id].delete()
+    RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
 
 class ShoppingCartFileGenerator:
