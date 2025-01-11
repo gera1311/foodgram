@@ -37,7 +37,7 @@ def process_ingredients(recipe, ingredients_data):
     recipe_ingredients = [
         RecipeIngredient(
             recipe=recipe,
-            ingredient_id=ingredient_data['id'],
+            ingredient=ingredient_data['id'],
             amount=ingredient_data['amount']
         )
         for ingredient_data in ingredients_data
