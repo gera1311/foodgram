@@ -356,7 +356,7 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        ingredients_data = self.initial_data.get('recipe_ingredients')
+        ingredients_data = self.initial_data.get('recipe_ingredients', None)
         tags_data = self.initial_data.pop('tags', None)
 
         if tags_data is not None:
