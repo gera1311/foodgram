@@ -356,8 +356,8 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        ingredients_data = self.initial_data.get('recipe_ingredients', None)
-        tags_data = self.initial_data.pop('tags', None)
+        ingredients_data = validated_data.pop('recipe_ingredients', None)
+        tags_data = validated_data.pop('tags', None)
 
         if tags_data is not None:
             instance.tags.clear()
@@ -371,28 +371,9 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             # Если изображение не передано, оставляем старое
             validated_data['image'] = instance.image
 
-        if 'recipe_ingredients' in self.initial_data:
-            ingredients_data = validated_data.pop('recipe_ingredients')
-            existing_ingredient = RecipeIngredient.objects.filter(
-                recipe=instance)
-            existing_ids = {
-                ingredient.ingredient.id for ingredient in existing_ingredient}
-            new_ids = {item['id'] for item in ingredients_data}
-            for ingredient in existing_ingredient:
-                if ingredient.ingredient.id not in new_ids:
-                    ingredient.delete()
-            for ingredient_data in ingredients_data:
-                ingredient_id = ingredient_data['id']
-                amount = ingredient_data['amount']
-                if ingredient_id in existing_ids:
-                    RecipeIngredient.objects.filter(
-                        recipe=instance,
-                        ingredient_id=ingredient_id
-                    ).update(amount=amount)
-                else:
-                    RecipeIngredient.objects.create(
-                        recipe=instance,
-                        ingredient_id=ingredient_id,
-                        amount=amount
-                    )
+        if ingredients_data is not None:
+            RecipeIngredient.objects.filter(recipe=instance).delete()
+            process_ingredients(recipe=instance,
+                                ingredients_data=ingredients_data)
+
         return super().update(instance, validated_data)
