@@ -356,9 +356,9 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, recipe, validated_data):
-        ingredients = validated_data.pop('ingredients')
+        ingredients = validated_data.pop('recipe_ingredients')
         tags = validated_data.pop('tags')
-        # image = validated_data.pop('image')
+        image = validated_data.pop('image')
 
         for key, value in validated_data.items():
             if hasattr(recipe, key):
@@ -372,8 +372,8 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             recipe.ingredients.clear()
             recipe.ingredients.set(tags)
 
-        # if image:
-        #     recipe.image.clear()
-        #     recipe.image.set(image)
+        if image:
+            recipe.image.clear()
+            recipe.image.set(image)
         recipe.save()
         return recipe
