@@ -283,10 +283,11 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # Проверка наличия ингредиентов
         ingredients = data.get('recipe_ingredients', [])
-        if not ingredients:
-            raise serializers.ValidationError(
-                {'ingredients': 'Список ингредиентов не может быть пустым.'}
-            )
+        if self.context['request'].method == 'POST':
+            if not ingredients:
+                raise serializers.ValidationError(
+                    {'ingredients': 'Список ингредиентов пуст.'}
+                )
         # Проверка на дублирование ингредиентов
         ingredient_ids = [ingredient['id'] for ingredient in ingredients]
         if len(ingredient_ids) != len(set(ingredient_ids)):
@@ -374,11 +375,5 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             RecipeIngredient.objects.filter(recipe=instance).delete()
             process_ingredients(recipe=instance,
                                 ingredients_data=ingredients_data)
-        else:
-            ingredients_data = instance.recipe_ingredients.all()
-            validated_data['recipe_ingredients'] = [
-                {'id': item.ingredient.id, 'amount': item.amount}
-                for item in ingredients_data
-            ]
 
         return super().update(instance, validated_data)
