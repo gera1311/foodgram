@@ -385,5 +385,4 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
                 else:
                     RecipeIngredient.objects.create(
                         recipe=instance, **ingredient_data)
-    
         return super().update(instance, validated_data)
