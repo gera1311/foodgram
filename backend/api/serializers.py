@@ -356,8 +356,6 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        print("Полученные данные для обновления:", validated_data)
-        print("Текущий объект перед обновлением:", instance)
         ingredients_data = validated_data.pop('recipe_ingredients', None)
         tags_data = validated_data.pop('tags')
 
@@ -370,6 +368,5 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
             process_ingredients(instance, ingredients_data)
 
         instance.save()
-        print("Обновленный объект:", instance)
 
         return super().update(instance, validated_data)
