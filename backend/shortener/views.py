@@ -25,9 +25,6 @@ def handle_short_link(request, short_code):
     try:
         # Ищем короткую ссылку в базе данных
         short_link = ShortLink.objects.get(short_code=short_code)
-        original_url = short_link.original_url
-        if original_url.startswith('/api/'):
-            original_url = original_url[len('/api/'):]
         # Перенаправляем на оригинальный URL
         return HttpResponseRedirect(short_link.original_url)
     except ShortLink.DoesNotExist:
