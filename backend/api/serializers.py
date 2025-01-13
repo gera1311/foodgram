@@ -363,7 +363,10 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
         instance.tags.set(tags_data)
 
         if ingredients_data is not None:
-            RecipeIngredient.objects.filter(recipe=instance).delete()
+            # RecipeIngredient.objects.filter(recipe=instance).delete()
+            instance.recipe_ingredients.all().delete()
             process_ingredients(instance, ingredients_data)
+
+        instance.save()
 
         return super().update(instance, validated_data)

@@ -114,10 +114,10 @@ class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
                                    related_name='recipe_ingredients',
                                    verbose_name='Ингредиент')
-    amount = models.CharField(blank=True,
-                              null=True,
-                              max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
-                              verbose_name='Количество')
+    amount = models.IntegerField(blank=True,
+                                 null=True,
+                                 max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
+                                 verbose_name='Количество')
 
     class Meta:
         verbose_name = 'Ингредиент рецепта'
