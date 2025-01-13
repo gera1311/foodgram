@@ -356,14 +356,14 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients')
+        ingredients_data = validated_data.pop('recipe_ingredients', None)
         tags_data = validated_data.pop('tags')
 
         instance.tags.clear()
         instance.tags.set(tags_data)
 
-        RecipeIngredient.objects.filter(recipe=instance).all().delete()
-        process_ingredients(instance, ingredients_data)
+        if ingredients_data is not None:
+            RecipeIngredient.objects.filter(recipe=instance).delete()
+            process_ingredients(instance, ingredients_data)
 
-        # process_ingredients(instance, ingredients_data)
         return super().update(instance, validated_data)
