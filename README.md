@@ -14,5 +14,7 @@
 
 ## Данные для входа в админку
 
+адрес сайта https://foodgram.shop/
+
 email: root@root.ru
 password: JlOv3bJ-5z
