@@ -26,7 +26,6 @@ def handle_short_link(request, short_code):
         # Ищем короткую ссылку в базе данных
         short_link = ShortLink.objects.get(short_code=short_code)
         original_url = short_link.original_url
-        # Проверяем, если URL начинается с /api/, заменяем на / (или что-то другое)
         if original_url.startswith('/api/'):
             original_url = original_url.replace('/api/', '/', 1)
         # Перенаправляем на оригинальный URL
