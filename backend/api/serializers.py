@@ -358,14 +358,11 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredients', None)
         tags_data = validated_data.pop('tags')
-
-        instance.tags.clear()
         instance.tags.set(tags_data)
-
         if ingredients_data is not None:
             instance.recipe_ingredients.all().delete()
-            process_ingredients(instance, ingredients_data)
-
-        instance.save()
-
+            self._process_ingredients(instance, ingredients_data)
         return super().update(instance, validated_data)
+
+    def _process_ingredients(self, recipe, ingredients_data):
+        process_ingredients(recipe, ingredients_data)
