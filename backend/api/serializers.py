@@ -363,25 +363,9 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
         instance.tags.set(tags_data)
 
         if ingredients_data is not None:
-            # Получаем текущие ингредиенты рецепта
-            current_ingredients = {
-                ingredient.ingredient.id: ingredient for ingredient
-                in instance.recipe_ingredients.all()}
-            # Обрабатываем новые ингредиенты
-            for ingredient_data in ingredients_data:
-                ingredient_id = ingredient_data['id']
-                amount = ingredient_data['amount']
-                # Если ингредиент уже существует, обновляем его количество
-                if ingredient_id in current_ingredients:
-                    current_ingredients[ingredient_id].amount = amount
-                    current_ingredients[ingredient_id].save()
-                else:
-                    # Если ингредиент новый, создаем новый объект
-                    RecipeIngredient.objects.create(
-                        recipe=instance,
-                        ingredient_id=ingredient_id,
-                        amount=amount
-                    )
+            # RecipeIngredient.objects.filter(recipe=instance).delete()
+            instance.recipe_ingredients.all().delete()
+            process_ingredients(instance, ingredients_data)
 
         instance.save()
 
