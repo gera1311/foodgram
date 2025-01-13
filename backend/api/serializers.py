@@ -354,7 +354,7 @@ class CreateUpdateDeleteRecipeSerializer(serializers.ModelSerializer):
 
         return recipe
 
-    @transaction.atomic
+    # @transaction.atomic
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredients', None)
         tags_data = validated_data.pop('tags')
