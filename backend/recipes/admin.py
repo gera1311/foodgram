@@ -51,7 +51,7 @@ class RecipeAdmin(admin.ModelAdmin):
     search_fields = ['name', 'author__username', 'tags__name']
 
     def favorite_count(self, obj):
-        return obj.favorite_recipe.count()
+        return obj.favorites.count()
     favorite_count.short_description = 'Число добавлений в избранное'
 
 
