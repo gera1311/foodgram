@@ -2,8 +2,10 @@ import random
 import string
 
 from django.http import HttpResponseRedirect, HttpResponseNotFound
+from django.shortcuts import get_object_or_404, redirect
 
 from .models import ShortLink
+from recipes.models import Recipe
 
 
 def generate_short_code(length=6):
@@ -23,10 +25,15 @@ def create_short_link(original_url):
 
 def handle_short_link(request, short_code):
     try:
-        # Ищем короткую ссылку в базе данных
-        short_link = ShortLink.objects.get(short_code=short_code)
-        # Перенаправляем на оригинальный URL
-        return HttpResponseRedirect(short_link.original_url)
+        # Ищем короткую ссылку по short_code
+        short_link = get_object_or_404(ShortLink, short_code=short_code)
+
+        # Ищем рецепт по URL
+        recipe_id = short_link.original_url.split('/')[-2]
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+
+        # Перенаправляем на URL рецепта
+        return redirect(f'/recipes/{recipe.id}/')
     except ShortLink.DoesNotExist:
         # Если короткая ссылка не найдена
         return HttpResponseNotFound('Короткая ссылка недействительна.')
