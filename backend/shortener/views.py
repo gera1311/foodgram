@@ -1,7 +1,7 @@
 import random
 import string
 
-from django.http import HttpResponseRedirect, HttpResponseNotFound
+from django.http import HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect
 
 from .models import ShortLink
