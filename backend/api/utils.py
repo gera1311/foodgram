@@ -5,7 +5,8 @@ import csv
 from io import BytesIO
 from django.http import HttpResponse
 from django.core.files.base import ContentFile
-from django.db.models import Sum
+from django.db.models import Sum, IntegerField
+from django.db.models.functions import Cast
 from reportlab.pdfgen import canvas
 from rest_framework import status
 from rest_framework.response import Response
@@ -94,11 +95,13 @@ def generate_shopping_cart_report(user, file_format='txt'):
     # Подсчитываем ингредиенты
     ingredients = RecipeIngredient.objects.filter(
         recipe__shopping_recipe__user=user
+    ).annotate(
+        amount_numeric=Cast('amount', IntegerField())
     ).values(
         'ingredient__name',
         'ingredient__measurement_unit'
     ).annotate(
-        total_amount=Sum('amount')
+        total_amount=Sum('amount_numeric')
     )
 
     # Преобразуем в словарь для дальнейшего использования
