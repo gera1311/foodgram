@@ -116,7 +116,6 @@ class RecipeIngredient(models.Model):
                                    verbose_name='Ингредиент')
     amount = models.IntegerField(blank=True,
                                  null=True,
-                                 max_length=MAX_LENGTH_FOR_SHORT_VARIABLE,
                                  verbose_name='Количество')
 
     class Meta:
